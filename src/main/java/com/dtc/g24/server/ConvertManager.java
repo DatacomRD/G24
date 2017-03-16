@@ -1,5 +1,7 @@
 package com.dtc.g24.server;
 
+import java.io.File;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -15,8 +17,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class ConvertManager {
 	public static final ConvertManager instance = new ConvertManager(
-		G24Setting.sharedFolder(),
-		G24Setting.converterPath()
+		G24Setting.sharedFolder()
 	);
 
 	// -loglevel quiet：用來關閉 log，否則 Process 會被 block 無法結束（原因不明）
@@ -28,8 +29,16 @@ public class ConvertManager {
 
 	private List<String> quene = new ArrayList<>();
 
-	private ConvertManager(String workspace, String convertHome) {
-		FULL_COMMAND = convertHome + EXEC;
+	private ConvertManager(String workspace) {
+		//取得 runtime class folder 的方法是參考：
+		//http://stackoverflow.com/questions/11747833/getting-filesystem-path-of-class-being-executed
+		//另一個可以考慮的方法是使用 ServletContext.getRealPath() 來取得實體路徑
+		String execPath = new File(
+			getClass().getProtectionDomain().getCodeSource().getLocation().getPath(),
+			"ffmpeg"
+		).getAbsolutePath();
+
+		FULL_COMMAND = execPath + File.separator + EXEC;
 		WORKSPACE = workspace;
 
 		ScheduledExecutorService scanService = Executors.newSingleThreadScheduledExecutor();
@@ -47,8 +56,8 @@ public class ConvertManager {
 				String fname = quene.remove(0);
 
 				//必須用雙引號包起來，不然遇到空白會發生問題
-				String srcFileName = wrap(WORKSPACE + fname + ".mpg");
-				String dstFileName = wrap(WORKSPACE + fname + ".mp4");
+				String srcFileName = wrap(Paths.get(WORKSPACE, fname + ".mpg").toString());
+				String dstFileName = wrap(Paths.get(WORKSPACE, fname + ".mp4").toString());
 
 				//執行外部程序
 				Runtime rt = Runtime.getRuntime();
